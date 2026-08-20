@@ -1,19 +1,11 @@
-import { GoogleGenAI } from '@google/genai';
 import { AIProvider } from './ai';
 import { ContentContext, BrandSettings, AnalysisResult } from '../types';
 import { getSystemPrompt } from '../prompt/systemPrompt';
 import { GEMINI_API_KEY } from '../config';
 
 export class GeminiProvider implements AIProvider {
-  private client: GoogleGenAI | null = null;
-
   constructor() {
-    if (GEMINI_API_KEY) {
-      this.client = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
-      console.log('Gemini AI Provider initialized successfully.');
-    } else {
-      console.warn('GEMINI_API_KEY is not set. Backend will run in Fallback Mock Mode.');
-    }
+    console.log('Gemini AI Provider initialized in Direct REST Mode.');
   }
 
   async analyzeComments(
@@ -27,11 +19,6 @@ export class GeminiProvider implements AIProvider {
     
     if (!keyToUse) {
       console.log('Running analysis in Fallback Mock Mode (Missing API Key)...');
-      return this.generateMockAIResponse(comments, content);
-    }
-
-    const clientInstance = apiKey ? new GoogleGenAI({ apiKey }) : this.client;
-    if (!clientInstance) {
       return this.generateMockAIResponse(comments, content);
     }
 
@@ -88,22 +75,41 @@ ${JSON.stringify(comments, null, 2)}
       required: ["results"]
     };
 
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
+    
+    const requestBody = {
+      contents: [
+        { role: 'user', parts: [{ text: userPrompt }] }
+      ],
+      systemInstruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: responseSchema,
+        temperature: 0.1,
+        maxOutputTokens: 1000
+      }
+    };
+
     try {
-      const response = await clientInstance.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-          { role: 'user', parts: [{ text: userPrompt }] }
-        ],
-        config: {
-          systemInstruction: systemPrompt,
-          responseMimeType: 'application/json',
-          responseSchema: responseSchema as any,
-          temperature: 0.1,
-          maxOutputTokens: 1000
-        }
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-goog-api-key': keyToUse
+        },
+        body: JSON.stringify(requestBody)
       });
 
-      const responseText = response.text;
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Gemini API returned status ${response.status}: ${errorText}`);
+      }
+
+      const responseData = (await response.json()) as any;
+      const responseText = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+      
       if (!responseText) {
         throw new Error('Empty response received from Gemini API');
       }
@@ -114,10 +120,8 @@ ${JSON.stringify(comments, null, 2)}
       }
 
       throw new Error('Invalid response structure returned by Gemini Model');
-    } catch (error: any) {
-      console.error('Gemini API Error:', error);
-      // Fall back to Mock generation instead of crashing the backend server
-      console.log('Falling back to local AI mock generation due to error.');
+    } catch (err) {
+      console.error('Gemini API call failed, falling back to mock generator:', err);
       return this.generateMockAIResponse(comments, content);
     }
   }

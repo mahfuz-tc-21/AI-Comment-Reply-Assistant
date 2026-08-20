@@ -38,16 +38,16 @@ function App() {
   // 1. Initial Load settings and setup tab check
   useEffect(() => {
     // Load saved settings
-    chrome.storage.local.get(['brandSettings', 'serverUrl', 'debugMode', 'geminiApiKey'], (result) => {
+    chrome.storage.local.get(['brandSettings', 'debugMode', 'geminiApiKey'], (result) => {
       if (result.brandSettings) setBrandSettings(result.brandSettings);
-      if (result.serverUrl) setServerUrl(result.serverUrl);
+      setServerUrl(DEFAULT_SERVER_URL);
       if (result.debugMode !== undefined) setDebugMode(result.debugMode);
       if (result.geminiApiKey) {
         setGeminiApiKey(result.geminiApiKey);
         setTempApiKey(result.geminiApiKey);
       }
       
-      checkServerHealth(result.serverUrl || DEFAULT_SERVER_URL);
+      checkServerHealth(DEFAULT_SERVER_URL);
     });
 
     // Detect environment on load
