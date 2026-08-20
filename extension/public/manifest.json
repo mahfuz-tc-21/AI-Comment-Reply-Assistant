@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "Programming Hero AI Reply Assistant",
+  "version": "1.0.0",
+  "description": "AI-powered comment reply assistant for YouTube Studio and Meta Business Suite.",
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "*://studio.youtube.com/*",
+    "*://business.facebook.com/*",
+    "*://*.facebook.com/*",
+    "*://*.youtube.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://studio.youtube.com/*",
+        "*://business.facebook.com/*",
+        "*://*.facebook.com/*",
+        "*://*.youtube.com/*",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

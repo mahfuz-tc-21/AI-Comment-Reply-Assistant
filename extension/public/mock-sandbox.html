@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Programming Hero AI Assistant - Testing Sandbox</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #0f0e17;
+      color: #fffffe;
+      margin: 0;
+      padding: 24px;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    header {
+      border-bottom: 2px solid #2e2a47;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    h1 {
+      margin: 0 0 8px 0;
+      color: #ff8906;
+      font-size: 24px;
+    }
+    p.lead {
+      color: #a7a9be;
+      margin: 0;
+      font-size: 14px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    .platform-card {
+      background-color: #16161a;
+      border: 1px solid #2e2a47;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .platform-card.youtube {
+      border-left: 4px solid #ef4444;
+    }
+    .platform-card.meta {
+      border-left: 4px solid #3b82f6;
+    }
+    h2.platform-title {
+      font-size: 16px;
+      margin-top: 0;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: bold;
+    }
+    .badge.yt { background-color: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .badge.fb { background-color: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+    
+    .context-block {
+      background-color: #242629;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .context-title {
+      font-weight: bold;
+      font-size: 13px;
+      color: #fffffe;
+      margin-bottom: 4px;
+    }
+    .context-desc {
+      font-size: 11px;
+      color: #94a1b2;
+      line-height: 1.4;
+    }
+    
+    .comments-list {
+      display: flex;
+      flex-col: column;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .mock-comment-row {
+      background-color: #0f0e17;
+      border: 1px solid #2e2a47;
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .comment-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mock-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: #ff8906;
+    }
+    .mock-author {
+      font-weight: bold;
+      font-size: 12px;
+      color: #fffffe;
+    }
+    .mock-text {
+      font-size: 12px;
+      color: #cfcbdc;
+      margin: 0;
+      line-height: 1.4;
+    }
+    
+    .reply-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-top: 1px dashed #2e2a47;
+      padding-top: 8px;
+      margin-top: 4px;
+    }
+    .reply-actions-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .mock-reply-btn {
+      background-color: #242629;
+      border: 1px solid #2e2a47;
+      color: #fffffe;
+      font-size: 10px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .mock-reply-btn:hover {
+      background-color: #ff8906;
+      color: #0f0e17;
+    }
+    .reply-input-wrapper {
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .mock-reply-input {
+      background-color: #16161a;
+      border: 1px solid #2e2a47;
+      border-radius: 4px;
+      color: #fffffe;
+      padding: 6px;
+      font-size: 11px;
+      resize: vertical;
+      min-height: 40px;
+      outline: none;
+    }
+    .mock-reply-input:focus {
+      border-color: #ff8906;
+    }
+    .post-btn-mock {
+      align-self: flex-end;
+      background-color: #ff8906;
+      border: none;
+      color: #0f0e17;
+      font-size: 10px;
+      font-weight: bold;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .status-alert {
+      background-color: rgba(255, 137, 6, 0.1);
+      border: 1px solid rgba(255, 137, 6, 0.3);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      margin-bottom: 24px;
+      color: #ff8906;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>PH AI Reply Assistant - Testing Sandbox</h1>
+    <p class="lead">Simulate YouTube and Meta comments offline. The extension side panel will extract data directly from this page.</p>
+  </header>
+
+  <div class="status-alert">
+    <strong>💡 Testing Tip:</strong> Open this page in Chrome, open the extension side panel, and click <strong>"Analyze First 5 Comments"</strong>. You can verify comment parsing, A/B/C variations, and test the <strong>"Insert Reply"</strong> button to watch text populate in the inputs below!
+  </div>
+
+  <div class="grid">
+    <!-- YouTube Studio Mockup -->
+    <div class="platform-card youtube">
+      <h2 class="platform-title">
+        YouTube Studio Comments Area
+        <span class="badge yt">studio.youtube.com</span>
+      </h2>
+      
+      <div class="context-block">
+        <div class="context-title mock-content-title">AI কি প্রোগ্রামারদের শেষ করে দিবে? ২০২৬ সালের কঠিন বাস্তবতা!</div>
+        <div class="context-desc mock-content-desc">আমাদের নতুন পডকাস্টে আলোচনা করেছি ২০২৬ সালে আর্টিফিশিয়াল ইন্টেলিজেন্স আমাদের ক্যারিয়ারে কী প্রভাব ফেলবে এবং নতুনদের করণীয় কী।</div>
+      </div>
+
+      <div class="comments-list">
+        <!-- Comment 1 -->
+        <div class="mock-comment-row" data-id="yt-1" data-responded="false">
+          <div class="comment-header">
+            <div class="mock-avatar" style="background-color: #a855f7;"></div>
+            <div class="mock-author">Tanvir Rahman</div>
+          </div>
+          <p class="mock-text">Vai ami CSE te admit hoite chai DIU or UIU? Konta best option hobe?</p>
+          <div class="reply-section">
+            <div class="reply-actions-row">
+              <button class="mock-reply-btn" onclick="toggleReplyBox('yt-1')">Reply</button>
+              <span style="font-size: 9px; color: #5e5a7b">Top-level comment</span>
+            </div>
+            <div class="reply-input-wrapper" id="input-wrapper-yt-1">
+              <textarea class="mock-reply-input" placeholder="Type a reply..."></textarea>
+              <button class="post-btn-mock" onclick="postReply('yt-1')">Post Reply (Manual)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comment 2 -->
+        <div class="mock-comment-row" data-id="yt-2" data-responded="false">
+          <div class="comment-header">
+            <div class="mock-avatar" style="background-color: #f43f5e;"></div>
+            <div class="mock-author">Tasnim Chowdhury</div>
+          </div>
+          <p class="mock-text">ভাই coding শেখা কি এখনো worth it? ২০২৬ এ এসেও কি জব পাওয়া যাবে?</p>
+          <div class="reply-section">
+            <div class="reply-actions-row">
+              <button class="mock-reply-btn" onclick="toggleReplyBox('yt-2')">Reply</button>
+              <span style="font-size: 9px; color: #5e5a7b">Top-level comment</span>
+            </div>
+            <div class="reply-input-wrapper" id="input-wrapper-yt-2">
+              <textarea class="mock-reply-input" placeholder="Type a reply..."></textarea>
+              <button class="post-btn-mock" onclick="postReply('yt-2')">Post Reply (Manual)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comment 3 -->
+        <div class="mock-comment-row" data-id="yt-3" data-responded="false">
+          <div class="comment-header">
+            <div class="mock-avatar" style="background-color: #10b981;"></div>
+            <div class="mock-author">Imtiaz Ahmed</div>
+          </div>
+          <p class="mock-text">Nice video, highly informative!</p>
+          <div class="reply-section">
+            <div class="reply-actions-row">
+              <button class="mock-reply-btn" onclick="toggleReplyBox('yt-3')">Reply</button>
+              <span style="font-size: 9px; color: #5e5a7b">Appreciation</span>
+            </div>
+            <div class="reply-input-wrapper" id="input-wrapper-yt-3">
+              <textarea class="mock-reply-input" placeholder="Type a reply..."></textarea>
+              <button class="post-btn-mock" onclick="postReply('yt-3')">Post Reply (Manual)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meta Business Suite Mockup -->
+    <div class="platform-card meta">
+      <h2 class="platform-title">
+        Meta Business Suite Inbox
+        <span class="badge fb">business.facebook.com</span>
+      </h2>
+
+      <div class="context-block">
+        <div class="context-title mock-content-title">এমন একটা Discord কমিউনিটি হলে কেমন হয়? যেখানে এক ভার্সিটির স্টুডেন্ট অন্য ভার্সিটির সাথে নেটওয়ার্কিং করতে পারবে...</div>
+        <div class="context-desc mock-content-desc">Facebook post details caption networking idea.</div>
+      </div>
+
+      <div class="comments-list">
+        <!-- Comment 4 -->
+        <div class="mock-comment-row" data-id="fb-1" data-responded="false">
+          <div class="comment-header">
+            <div class="mock-avatar" style="background-color: #3b82f6;"></div>
+            <div class="mock-author">Mahir Faisal</div>
+          </div>
+          <p class="mock-text">I wanna join, link ta pabo kothay?</p>
+          <div class="reply-section">
+            <div class="reply-actions-row">
+              <button class="mock-reply-btn" onclick="toggleReplyBox('fb-1')">Reply</button>
+              <span style="font-size: 9px; color: #5e5a7b">Top-level comment</span>
+            </div>
+            <div class="reply-input-wrapper" id="input-wrapper-fb-1">
+              <textarea class="mock-reply-input" placeholder="Type a reply..."></textarea>
+              <button class="post-btn-mock" onclick="postReply('fb-1')">Post Reply (Manual)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Comment 5 -->
+        <div class="mock-comment-row" data-id="fb-2" data-responded="false">
+          <div class="comment-header">
+            <div class="mock-avatar" style="background-color: #eab308;"></div>
+            <div class="mock-author">Runa Laila</div>
+          </div>
+          <p class="mock-text">খুবই চমৎকার একটা আইডিয়া ভাইয়া! দ্রুত লিংক দিন।</p>
+          <div class="reply-section">
+            <div class="reply-actions-row">
+              <button class="mock-reply-btn" onclick="toggleReplyBox('fb-2')">Reply</button>
+              <span style="font-size: 9px; color: #5e5a7b">Top-level comment</span>
+            </div>
+            <div class="reply-input-wrapper" id="input-wrapper-fb-2">
+              <textarea class="mock-reply-input" placeholder="Type a reply..."></textarea>
+              <button class="post-btn-mock" onclick="postReply('fb-2')">Post Reply (Manual)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function toggleReplyBox(id) {
+    const wrapper = document.getElementById('input-wrapper-' + id);
+    if (wrapper.style.display === 'flex') {
+      wrapper.style.display = 'none';
+    } else {
+      wrapper.style.display = 'flex';
+    }
+  }
+
+  function postReply(id) {
+    const wrapper = document.getElementById('input-wrapper-' + id);
+    const textarea = wrapper.querySelector('.mock-reply-input');
+    const text = textarea.value.trim();
+    if (!text) {
+      alert('Please enter a reply first!');
+      return;
+    }
+    alert('Reply posted manually: ' + text);
+    
+    // Mark as responded in dataset
+    const row = textarea.closest('.mock-comment-row');
+    row.dataset.responded = 'true';
+    row.style.opacity = '0.5';
+    wrapper.style.display = 'none';
+  }
+</script>
+</body>
+</html>

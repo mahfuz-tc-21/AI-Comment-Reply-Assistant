@@ -1,0 +1,213 @@
+import { GoogleGenAI } from '@google/genai';
+import { AIProvider } from './ai';
+import { ContentContext, BrandSettings, AnalysisResult } from '../types';
+import { getSystemPrompt } from '../prompt/systemPrompt';
+import { GEMINI_API_KEY } from '../config';
+
+export class GeminiProvider implements AIProvider {
+  private client: GoogleGenAI | null = null;
+
+  constructor() {
+    if (GEMINI_API_KEY) {
+      this.client = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+      console.log('Gemini AI Provider initialized successfully.');
+    } else {
+      console.warn('GEMINI_API_KEY is not set. Backend will run in Fallback Mock Mode.');
+    }
+  }
+
+  async analyzeComments(
+    platform: string,
+    content: ContentContext,
+    comments: { id: string; author: string; text: string }[],
+    settings?: BrandSettings
+  ): Promise<AnalysisResult[]> {
+    
+    // If no client (no API key), run fallback mock generator immediately
+    if (!this.client) {
+      console.log('Running analysis in Fallback Mock Mode (Missing API Key)...');
+      return this.generateMockAIResponse(comments, content);
+    }
+
+    const systemPrompt = getSystemPrompt(
+      settings?.brandName,
+      settings?.brandTone,
+      settings?.customInstructions
+    );
+
+    const userPrompt = `
+Platform: ${platform}
+Content/Post Details:
+- Title/Text: ${content.title}
+- Description/Url: ${content.description || ''} (${content.url})
+
+Comments to analyze:
+${JSON.stringify(comments, null, 2)}
+`;
+
+    const responseSchema = {
+      type: "OBJECT",
+      properties: {
+        results: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              commentId: { type: "STRING" },
+              intent: { type: "STRING" },
+              sentiment: { type: "STRING" },
+              requiresReply: { type: "BOOLEAN" },
+              priority: { type: "STRING" },
+              replies: {
+                type: "OBJECT",
+                properties: {
+                  optionA: { type: "STRING" },
+                  optionB: { type: "STRING" },
+                  optionC: { type: "STRING" }
+                },
+                required: ["optionA", "optionB", "optionC"]
+              }
+            },
+            required: [
+              "commentId", 
+              "intent", 
+              "sentiment", 
+              "requiresReply", 
+              "priority", 
+              "replies"
+            ]
+          }
+        }
+      },
+      required: ["results"]
+    };
+
+    try {
+      const response = await this.client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+          { role: 'user', parts: [{ text: userPrompt }] }
+        ],
+        config: {
+          systemInstruction: systemPrompt,
+          responseMimeType: 'application/json',
+          responseSchema: responseSchema as any,
+          temperature: 0.1,
+          maxOutputTokens: 1000
+        }
+      });
+
+      const responseText = response.text;
+      if (!responseText) {
+        throw new Error('Empty response received from Gemini API');
+      }
+
+      const parsed = JSON.parse(responseText);
+      if (parsed && Array.isArray(parsed.results)) {
+        return parsed.results as AnalysisResult[];
+      }
+
+      throw new Error('Invalid response structure returned by Gemini Model');
+    } catch (error: any) {
+      console.error('Gemini API Error:', error);
+      // Fall back to Mock generation instead of crashing the backend server
+      console.log('Falling back to local AI mock generation due to error.');
+      return this.generateMockAIResponse(comments, content);
+    }
+  }
+
+  // Realistic fallback / Mock generator for offline/unconfigured environments
+  private generateMockAIResponse(
+    comments: { id: string; author: string; text: string }[],
+    content: ContentContext
+  ): AnalysisResult[] {
+    return comments.map((comment) => {
+      const isBangla = /[\u0980-\u09FF]/.test(comment.text);
+      const textLower = comment.text.toLowerCase();
+      
+      let intent = 'appreciation';
+      let sentiment: 'positive' | 'negative' | 'neutral' = 'positive';
+      let requiresReply = true;
+      let priority: 'low' | 'medium' | 'high' = 'low';
+      let replies = { optionA: '', optionB: '', optionC: '' };
+
+      if (textLower.includes('worth') || textLower.includes('cse') || textLower.includes('admit') || textLower.includes(' ভর্তি') || textLower.includes('কন্টিনিউ')) {
+        intent = 'career_question';
+        priority = 'high';
+        sentiment = 'neutral';
+        
+        if (isBangla || textLower.includes('ami') || textLower.includes('vai')) {
+          replies = {
+            optionA: 'অবশ্যই ভাই, সিএসই পড়া এখনো অনেক লাভজনক। তবে থিওরির পাশাপাশি নিজের প্রবলেম সলভিং স্কিলটাও বাড়াতে হবে।',
+            optionB: 'সিএসই পড়া অবশ্যই ভালো অপশন ভাই, তবে সাথে ভালো কোডিং স্কিল থাকা লাগবে।',
+            optionC: 'সিএসই পড়লে ফিউচার খুবই ব্রাইট ভাই! শুধু ভার্সিটির ভরসায় না থেকে নিজেকে সেলফ-লার্নিংয়ে অভ্যস্ত করতে হবে।'
+          };
+        } else {
+          replies = {
+            optionA: 'Yes, pursuing CSE is definitely worth it! Just make sure to build strong problem solving skills along with your degree.',
+            optionB: 'Definitely worth it. Focus on building real projects alongside your coursework.',
+            optionC: 'CSE has great scope! But remember, your self-learning coding skills will matter the most in the industry.'
+          };
+        }
+      } else if (textLower.includes('join') || textLower.includes('লিংক') || textLower.includes('link') || textLower.includes('চাই')) {
+        intent = 'course_admission';
+        priority = 'high';
+        
+        if (isBangla || textLower.includes('ami') || textLower.includes('vai') || textLower.includes('wanna')) {
+          replies = {
+            optionA: 'ধন্যবাদ ভাই! আমাদের ডিসকর্ড কমিউনিটিতে জয়েন করতে চাইলে ডেসক্রিপশনে দেয়া লিংকটি চেক করতে পারো।',
+            optionB: 'ডিসকর্ডে জয়েন করতে কমেন্ট বা ডেসক্রিপশনের লিংকে ক্লিক করো ভাই।',
+            optionC: 'অবশ্যই ভাই, লিংকে ক্লিক করে আমাদের কমিউনিটিতে যোগ দাও। সেখানে আমরা সবাই একসাথে ডিসকাস করি!'
+          };
+        } else {
+          replies = {
+            optionA: 'Hey! You can join our Discord community by clicking the link in the video description.',
+            optionB: 'Awesome, check the description link to join our Discord!',
+            optionC: 'Sure! Click the invitation link in the post to join our community. See you there!'
+          };
+        }
+      } else if (textLower.includes('spam') || textLower.includes('promo') || textLower.includes('ভুয়া') || textLower.includes('fake')) {
+        intent = 'spam';
+        requiresReply = true;
+        sentiment = 'negative';
+        if (isBangla) {
+          replies = {
+            optionA: 'ধন্যবাদ ভাই! আমাদের কোনো সার্ভিস বা বিষয়ে সমস্যা হলে আমাদের ইনবক্স করতে পারো, সাহায্য করব।',
+            optionB: 'ফিডব্যাকের জন্য ধন্যবাদ ভাই।',
+            optionC: 'ধন্যবাদ ভাই কমেন্ট করার জন্য! কোনো অভিযোগ বা সমস্যা থাকলে পেজে নক দিও।'
+          };
+        } else {
+          replies = {
+            optionA: 'Thanks for your feedback! If you face any issues, feel free to reach out to us via inbox.',
+            optionB: 'Thanks for the feedback.',
+            optionC: 'If you need support, please message our page directly!'
+          };
+        }
+      } else {
+        // Default Appreciation/Positive feedback
+        if (isBangla || textLower.includes('bhalo') || textLower.includes('nice') || textLower.includes('sundor')) {
+          replies = {
+            optionA: 'অনেক ধন্যবাদ ভাই! তোমাদের সুন্দর সাপোর্টই আমাদের এগিয়ে চলার অনুপ্রেরণা।',
+            optionB: 'অনেক ধন্যবাদ ভাই পাশে থাকার জন্য!',
+            optionC: 'ধন্যবাদ ভাই কমেন্ট করার জন্য! এভাবে পাশে থেকো, সামনে আরও দারুন ভিডিও আসছে।'
+          };
+        } else {
+          replies = {
+            optionA: 'Thank you so much! Your support keeps us motivated to build better content.',
+            optionB: 'Thanks for the support!',
+            optionC: 'Great to hear that! Stay tuned, we have more exciting things coming up soon.'
+          };
+        }
+      }
+
+      return {
+        commentId: comment.id,
+        intent,
+        sentiment,
+        requiresReply,
+        priority,
+        replies
+      };
+    });
+  }
+}
