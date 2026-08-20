@@ -11,6 +11,24 @@ function generateHash(str: string): string {
   return Math.abs(hash).toString(36);
 }
 
+function isTimestamp(str: string): boolean {
+  const s = str.trim().toLowerCase();
+  if (/^\d+[wdhms]$/.test(s)) return true;
+  if (/^\d+\s+(week|day|hour|min|sec|yr|mo|wk|d|h|m|s)/.test(s)) return true;
+  if (s === 'just now' || s === 'yesterday' || s.includes('ago') || s.includes('edited')) return true;
+  return false;
+}
+
+function isGenericAction(str: string): boolean {
+  const s = str.trim().toLowerCase();
+  const actions = [
+    'like', 'reply', 'hide', 'send', 'share', 'respond', 'more', 'chat', 'message',
+    'উত্তর দিন', 'পছন্দ করুন', 'লুকান', 'শেয়ার করুন', 'আরও',
+    'see translation', 'see original', 'translate', 'view 1 reply', 'view replies'
+  ];
+  return actions.includes(s) || /view\s+\d+\s+repl/i.test(s) || /^\d+\s+repl/i.test(s) || s === '·';
+}
+
 export class MetaAdapter implements PlatformAdapter {
   private commentElementsMap: Map<string, {
     commentNode: HTMLElement;
@@ -134,33 +152,38 @@ export class MetaAdapter implements PlatformAdapter {
         continue;
       }
 
-      // Extract author
-      const authorEl = commentNode.querySelector('a') ||
-                       commentNode.querySelector('strong') ||
-                       commentNode.querySelector('.x1i10hfl'); // dynamic name link
-      const author = authorEl?.textContent?.trim() || 'Facebook User';
+      // Extract author (filtering out timestamps and actions)
+      let author = 'Facebook User';
+      const authorCandidates = commentNode.querySelectorAll('a, span[role="link"], strong, .x1i10hfl');
+      for (let k = 0; k < authorCandidates.length; k++) {
+        const txt = authorCandidates[k].textContent?.trim() || '';
+        if (txt && txt.length > 0 && !isTimestamp(txt) && !isGenericAction(txt)) {
+          author = txt;
+          break;
+        }
+      }
 
       // Extract avatar
       const avatarEl = commentNode.querySelector('img') as HTMLImageElement;
       const avatar = avatarEl?.src || undefined;
 
-      // Extract comment text
-      // Usually comments have a separate span or div containing the actual text
-      // We look for spans that contain text other than name, time, and reply/like actions.
+      // Extract comment text using leaf text parsing
       let text = '';
-      const textContainers = commentNode.querySelectorAll('span, div[dir="auto"]');
+      const textContainers = commentNode.querySelectorAll('span, div[dir="auto"], div');
       for (let j = 0; j < textContainers.length; j++) {
-        const textVal = textContainers[j].textContent?.trim() || '';
+        const el = textContainers[j] as HTMLElement;
+        const textVal = el.textContent?.trim() || '';
+        
+        // Verify it doesn't wrap child divs or spans to avoid extracting joint text lines
+        const isLeafText = !el.querySelector('span, div');
+        
         if (
+          isLeafText &&
           textVal &&
           textVal.length > 0 &&
           textVal !== author &&
-          textVal.toLowerCase() !== 'reply' &&
-          textVal.toLowerCase() !== 'like' &&
-          textVal.toLowerCase() !== 'উত্তর দিন' &&
-          !textVal.includes('hr') &&
-          !textVal.includes('min') &&
-          !textVal.includes('d')
+          !isTimestamp(textVal) &&
+          !isGenericAction(textVal)
         ) {
           text = textVal;
           break;
