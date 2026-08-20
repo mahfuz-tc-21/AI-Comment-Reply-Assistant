@@ -1,6 +1,6 @@
 import { BrandSettings } from './types';
 
-export const DEFAULT_SERVER_URL = 'http://localhost:3000';
+export const DEFAULT_SERVER_URL = 'https://ph-ai-reply-assistant.vercel.app';
 
 export const DEFAULT_BRAND_SETTINGS: BrandSettings = {
   brandName: 'Programming Hero',

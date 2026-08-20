@@ -5,6 +5,7 @@ export interface AIProvider {
     platform: string,
     content: ContentContext,
     comments: { id: string; author: string; text: string }[],
-    settings?: BrandSettings
+    settings?: BrandSettings,
+    apiKey?: string
   ): Promise<AnalysisResult[]>;
 }

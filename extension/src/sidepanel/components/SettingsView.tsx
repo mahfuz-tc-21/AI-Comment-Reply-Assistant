@@ -5,19 +5,19 @@ import { DEFAULT_BRAND_SETTINGS, DEFAULT_SERVER_URL } from '../../shared/constan
 
 interface SettingsViewProps {
   onClose: () => void;
-  onSave: (settings: BrandSettings, serverUrl: string) => void;
+  onSave: (settings: BrandSettings, geminiApiKey: string) => void;
   currentSettings: BrandSettings;
-  currentServerUrl: string;
+  currentGeminiApiKey: string;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   onClose,
   onSave,
   currentSettings,
-  currentServerUrl
+  currentGeminiApiKey
 }) => {
   const [settings, setSettings] = useState<BrandSettings>(currentSettings);
-  const [serverUrl, setServerUrl] = useState<string>(currentServerUrl);
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(currentGeminiApiKey);
   const [wordsToAvoidStr, setWordsToAvoidStr] = useState<string>('');
   const [preferredPhrasesStr, setPreferredPhrasesStr] = useState<string>('');
 
@@ -59,14 +59,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       preferredPhrases: updatedPhrases
     };
 
-    onSave(finalSettings, serverUrl);
+    onSave(finalSettings, geminiApiKey);
     onClose();
   };
 
   const handleResetDefaults = () => {
     if (confirm('Reset settings to Programming Hero defaults?')) {
       setSettings(DEFAULT_BRAND_SETTINGS);
-      setServerUrl(DEFAULT_SERVER_URL);
+      setGeminiApiKey('');
     }
   };
 
@@ -92,15 +92,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </div>
 
       <div className="space-y-3 text-xs">
-        {/* Server Endpoint */}
+        {/* Gemini API Key */}
         <div>
-          <label className="block text-[#84809e] mb-1 font-medium">Backend API Endpoint</label>
+          <label className="block text-[#84809e] mb-1 font-medium">Gemini API Key</label>
           <input
-            type="text"
-            value={serverUrl}
-            onChange={(e) => setServerUrl(e.target.value)}
+            type="password"
+            value={geminiApiKey}
+            onChange={(e) => setGeminiApiKey(e.target.value)}
             className="w-full bg-[#161224] border border-[#2d274e] rounded p-2 text-white outline-none focus:border-brand-500"
-            placeholder="http://localhost:3000"
+            placeholder="Enter your API Key (AIzaSy...)"
           />
         </div>
 

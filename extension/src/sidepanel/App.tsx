@@ -19,6 +19,9 @@ function App() {
   const [brandSettings, setBrandSettings] = useState<BrandSettings>(DEFAULT_BRAND_SETTINGS);
   const [serverStatus, setServerStatus] = useState<'connected' | 'error' | 'checking'>('checking');
   
+  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
+  const [tempApiKey, setTempApiKey] = useState<string>('');
+  
   const [status, setStatus] = useState<'idle' | 'detecting' | 'loading_comments' | 'analyzing' | 'complete' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -35,10 +38,14 @@ function App() {
   // 1. Initial Load settings and setup tab check
   useEffect(() => {
     // Load saved settings
-    chrome.storage.local.get(['brandSettings', 'serverUrl', 'debugMode'], (result) => {
+    chrome.storage.local.get(['brandSettings', 'serverUrl', 'debugMode', 'geminiApiKey'], (result) => {
       if (result.brandSettings) setBrandSettings(result.brandSettings);
       if (result.serverUrl) setServerUrl(result.serverUrl);
       if (result.debugMode !== undefined) setDebugMode(result.debugMode);
+      if (result.geminiApiKey) {
+        setGeminiApiKey(result.geminiApiKey);
+        setTempApiKey(result.geminiApiKey);
+      }
       
       checkServerHealth(result.serverUrl || DEFAULT_SERVER_URL);
     });
@@ -162,7 +169,8 @@ function App() {
               author: c.author,
               text: c.text
             })),
-            settings: brandSettings
+            settings: brandSettings,
+            apiKey: geminiApiKey
           })
         });
 
@@ -208,7 +216,8 @@ function App() {
             author: comment.author,
             text: comment.text
           }],
-          settings: brandSettings
+          settings: brandSettings,
+          apiKey: geminiApiKey
         })
       });
 
@@ -265,14 +274,20 @@ function App() {
   };
 
   // 6. Settings saved
-  const handleSaveSettings = (newSettings: BrandSettings, newServerUrl: string) => {
+  const handleSaveSettings = (newSettings: BrandSettings, newApiKey: string) => {
     setBrandSettings(newSettings);
-    setServerUrl(newServerUrl);
+    setGeminiApiKey(newApiKey);
     chrome.storage.local.set({
       brandSettings: newSettings,
-      serverUrl: newServerUrl
+      geminiApiKey: newApiKey
     });
-    checkServerHealth(newServerUrl);
+  };
+
+  const handleSaveFirstTimeKey = () => {
+    if (tempApiKey.trim()) {
+      setGeminiApiKey(tempApiKey.trim());
+      chrome.storage.local.set({ geminiApiKey: tempApiKey.trim() });
+    }
   };
 
   // Toggle debug panel
@@ -301,7 +316,7 @@ function App() {
           onClose={() => setShowSettings(false)}
           onSave={handleSaveSettings}
           currentSettings={brandSettings}
-          currentServerUrl={serverUrl}
+          currentGeminiApiKey={geminiApiKey}
         />
       ) : debugMode && !showSettings ? (
         /* Debug Panel */
@@ -312,6 +327,43 @@ function App() {
           serverUrl={serverUrl}
           onClose={handleToggleDebug}
         />
+      ) : !geminiApiKey && status !== 'detecting' ? (
+        /* First-Time setup overlay */
+        <div className="flex flex-col min-h-screen bg-[#0d0b14] text-[#f3f4f6] justify-center p-6 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-600 to-purple-500 flex items-center justify-center shadow-lg shadow-brand-600/30 mx-auto">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="font-bold text-lg text-white">PH AI Assistant</h1>
+            <p className="text-xs text-[#84809e] max-w-[250px] mx-auto leading-normal">
+              To get started, please enter your Gemini API Key. It will be stored securely on your local device.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs text-[#84809e] mb-1 font-medium">Gemini API Key</label>
+              <input
+                type="password"
+                value={tempApiKey}
+                onChange={(e) => setTempApiKey(e.target.value)}
+                className="w-full bg-[#161224] border border-[#2d274e] rounded-lg p-2.5 text-xs text-white outline-none focus:border-brand-500"
+                placeholder="Enter key (AIzaSy...)"
+              />
+              <p className="text-[10px] text-[#5e5a7b] mt-2 leading-normal">
+                Get a free API key from the <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="text-brand-400 hover:underline">Google AI Studio</a>.
+              </p>
+            </div>
+
+            <button
+              onClick={handleSaveFirstTimeKey}
+              disabled={!tempApiKey.trim()}
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold text-xs shadow-md shadow-brand-600/10 transition disabled:opacity-50 cursor-pointer"
+            >
+              Save Key & Start
+            </button>
+          </div>
+        </div>
       ) : (
         /* Main Panel content */
         <main className="flex-1 p-4 space-y-4">

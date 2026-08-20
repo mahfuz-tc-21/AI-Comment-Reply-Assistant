@@ -39,7 +39,8 @@ const AnalyzeRequestSchema = z.object({
   content: ContentSchema,
   comments: z.array(CommentItemSchema).max(10, 'Maximum comments to analyze at once is 10'),
   provider: z.enum(['gemini', 'openai']).optional().default('gemini'),
-  settings: BrandSettingsSchema.partial().optional()
+  settings: BrandSettingsSchema.partial().optional(),
+  apiKey: z.string().optional()
 });
 
 router.post('/analyze-comments', async (req: Request, res: Response): Promise<void> => {
@@ -55,7 +56,7 @@ router.post('/analyze-comments', async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    const { platform, content, comments, provider, settings } = validation.data;
+    const { platform, content, comments, provider, settings, apiKey } = validation.data;
 
     // 2. Select AI Provider
     let activeProvider: AIProvider = geminiProvider;
@@ -70,7 +71,8 @@ router.post('/analyze-comments', async (req: Request, res: Response): Promise<vo
       platform,
       content,
       comments,
-      settings as any
+      settings as any,
+      apiKey
     );
 
     res.json({

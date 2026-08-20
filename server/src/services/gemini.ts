@@ -20,12 +20,18 @@ export class GeminiProvider implements AIProvider {
     platform: string,
     content: ContentContext,
     comments: { id: string; author: string; text: string }[],
-    settings?: BrandSettings
+    settings?: BrandSettings,
+    apiKey?: string
   ): Promise<AnalysisResult[]> {
+    const keyToUse = apiKey || GEMINI_API_KEY;
     
-    // If no client (no API key), run fallback mock generator immediately
-    if (!this.client) {
+    if (!keyToUse) {
       console.log('Running analysis in Fallback Mock Mode (Missing API Key)...');
+      return this.generateMockAIResponse(comments, content);
+    }
+
+    const clientInstance = apiKey ? new GoogleGenAI({ apiKey }) : this.client;
+    if (!clientInstance) {
       return this.generateMockAIResponse(comments, content);
     }
 
@@ -83,7 +89,7 @@ ${JSON.stringify(comments, null, 2)}
     };
 
     try {
-      const response = await this.client.models.generateContent({
+      const response = await clientInstance.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: [
           { role: 'user', parts: [{ text: userPrompt }] }
