@@ -8,7 +8,7 @@ class GeminiProvider {
         console.log('Gemini AI Provider initialized in Direct REST Mode.');
     }
     async analyzeComments(platform, content, comments, settings, apiKey) {
-        const keyToUse = apiKey || config_1.GEMINI_API_KEY;
+        const keyToUse = (apiKey && apiKey.trim() !== '') ? apiKey.trim() : (config_1.GEMINI_API_KEY ? config_1.GEMINI_API_KEY.trim() : '');
         if (!keyToUse) {
             console.log('Running analysis in Fallback Mock Mode (Missing API Key)...');
             return this.generateMockAIResponse(comments, content);
@@ -59,7 +59,7 @@ ${JSON.stringify(comments, null, 2)}
             },
             required: ["results"]
         };
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(keyToUse)}`;
         const requestBody = {
             contents: [
                 { role: 'user', parts: [{ text: userPrompt }] }
@@ -71,15 +71,14 @@ ${JSON.stringify(comments, null, 2)}
                 responseMimeType: 'application/json',
                 responseSchema: responseSchema,
                 temperature: 0.1,
-                maxOutputTokens: 1000
+                maxOutputTokens: 4096
             }
         };
         try {
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-goog-api-key': keyToUse
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(requestBody)
             });
@@ -99,7 +98,11 @@ ${JSON.stringify(comments, null, 2)}
             throw new Error('Invalid response structure returned by Gemini Model');
         }
         catch (err) {
-            console.error('Gemini API call failed, falling back to mock generator:', err);
+            console.error('Gemini API call failed:', err);
+            // If an explicit API key was provided by the user/env, re-throw the error so UI receives the actual error
+            if (keyToUse) {
+                throw new Error(`Gemini API Error: ${err.message || err}`);
+            }
             return this.generateMockAIResponse(comments, content);
         }
     }

@@ -59,7 +59,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       preferredPhrases: updatedPhrases
     };
 
-    onSave(finalSettings, geminiApiKey);
+    onSave(finalSettings, geminiApiKey.trim());
     onClose();
   };
 

@@ -43,8 +43,9 @@ function App() {
       setServerUrl(DEFAULT_SERVER_URL);
       if (result.debugMode !== undefined) setDebugMode(result.debugMode);
       if (result.geminiApiKey) {
-        setGeminiApiKey(result.geminiApiKey);
-        setTempApiKey(result.geminiApiKey);
+        const trimmed = result.geminiApiKey.trim();
+        setGeminiApiKey(trimmed);
+        setTempApiKey(trimmed);
       }
       
       checkServerHealth(DEFAULT_SERVER_URL);
@@ -170,12 +171,13 @@ function App() {
               text: c.text
             })),
             settings: brandSettings,
-            apiKey: geminiApiKey
+            apiKey: geminiApiKey.trim()
           })
         });
 
         if (!response.ok) {
-          throw new Error(`Server returned status ${response.status}`);
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || errorData.error || `Server returned status ${response.status}`);
         }
 
         const data = await response.json();
@@ -217,12 +219,13 @@ function App() {
             text: comment.text
           }],
           settings: brandSettings,
-          apiKey: geminiApiKey
+          apiKey: geminiApiKey.trim()
         })
       });
 
       if (!response.ok) {
-        throw new Error(`Server error ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || `Server error ${response.status}`);
       }
 
       const data = await response.json();
@@ -275,11 +278,13 @@ function App() {
 
   // 6. Settings saved
   const handleSaveSettings = (newSettings: BrandSettings, newApiKey: string) => {
+    const trimmedKey = newApiKey.trim();
     setBrandSettings(newSettings);
-    setGeminiApiKey(newApiKey);
+    setGeminiApiKey(trimmedKey);
+    setTempApiKey(trimmedKey);
     chrome.storage.local.set({
       brandSettings: newSettings,
-      geminiApiKey: newApiKey
+      geminiApiKey: trimmedKey
     });
   };
 
